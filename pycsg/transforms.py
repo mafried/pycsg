@@ -5,8 +5,10 @@ from pycsg.csg_node import CSGNode, register_node_type
 
 
 class Pose(CSGNode):
-    def __init__(self, pos=[0.0, 0.0, 0.0], rot=[0.0, 0.0, 0.0], children=[], name=''):
+    def __init__(self, pos=[0.0, 0.0, 0.0], rot=[0.0, 0.0, 0.0], children=[], name='', degrees=True):
         super().__init__(name, children)
+
+        self.degrees = degrees
 
         # translate
         self.t = np.array([
@@ -17,7 +19,7 @@ class Pose(CSGNode):
         ])
 
         # rotate
-        self.r = Rotation.from_euler('xyz', rot, degrees=True)
+        self.r = Rotation.from_euler('xyz', rot, degrees=self.degrees)
         r = self.r.as_matrix()
         r = np.append(r, [[0.0, 0.0, 0.0]], axis=0)
         r = np.append(r, [[0.0], [0.0], [0.0], [1.0]], axis=1)
@@ -40,7 +42,7 @@ class Pose(CSGNode):
     def to_dict(self):
         d = super().to_dict().copy()
         d['pos'] = [self.t[0, 3], self.t[1, 3], self.t[2, 3]]
-        d['rot'] = list(self.r.as_euler('xyz', degrees=True))
+        d['rot'] = list(self.r.as_euler('xyz', degrees=self.degrees))
         return d
 
     @staticmethod

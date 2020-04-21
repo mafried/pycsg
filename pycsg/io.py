@@ -9,7 +9,8 @@ def node_from_old_json_format(json, degrees=True):
     children = [node_from_old_json_format(c, degrees) for c in json['childs']] if 'childs' in json else []
 
     def pose(j, n):
-        return Pose(j['params']['center'], j['params']['rotation'], [n], str(uuid.uuid1()), degrees)
+        return Pose(j['params']['center'], j['params']['rotation'] if 'rotation' in j['params'] else [0,0,0], [n],
+                    str(uuid.uuid1()), degrees)
 
     def name_or_cnt(j):
         return j['name'] if 'name' in j else str(uuid.uuid1())

@@ -1,2 +1,1 @@
-# pycsg
-SDF-based CSG library for Python 
+CSG Library for Python

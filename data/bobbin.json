@@ -1,1 +1,93 @@
-{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"childs":[{"geo":"cube","name":"cube1","params":{"center":[0.0,0.0,-1.5],"radius":[5.0,5.0,1.5],"rotation":[-0.0,0.0,-0.0]}},{"geo":"cylinder","name":"cyl1","params":{"center":[0.0,0.0,0.0],"height":3.0,"radius":3.0,"rotation":[1.5707963267949,0.0,0.0]}}],"op":"union"},{"geo":"cylinder","name":"cyl2","params":{"center":[0.0,0.0,1.75],"height":1.0,"radius":2.5,"rotation":[1.5707963267949,0.0,0.0]}}],"op":"union"},{"geo":"cylinder","name":"cyl3","params":{"center":[0.0,0.0,2.25],"height":0.5,"radius":3.0,"rotation":[1.5707963267949,0.0,0.0]}}],"op":"union"},{"geo":"cylinder","name":"cyl4","params":{"center":[3.89711431702997,2.25,0.0],"height":10.0,"radius":0.5,"rotation":[1.5707963267949,0.523598775598299,3.06161699786838e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl5","params":{"center":[-2.25,3.89711431702997,0.0],"height":10.0,"radius":0.5,"rotation":[1.5707963267949,2.0943951023932,5.30287619362453e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl6","params":{"center":[-3.89711431702997,-2.25,0.0],"height":10.0,"radius":0.5,"rotation":[1.5707963267949,-2.61799387799149,-3.06161699786838e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl7","params":{"center":[2.25,-3.89711431702997,0.0],"height":10.0,"radius":0.5,"rotation":[1.5707963267949,-1.0471975511966,-5.30287619362453e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl8","params":{"center":[4.59619407771256,4.59619407771256,0.0],"height":10.0,"radius":1.5,"rotation":[1.5707963267949,0.785398163397448,4.32978028117747e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl9","params":{"center":[-4.59619407771256,4.59619407771256,0.0],"height":10.0,"radius":1.5,"rotation":[1.5707963267949,2.35619449019234,4.32978028117747e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl10","params":{"center":[-4.59619407771256,-4.59619407771256,0.0],"height":10.0,"radius":1.5,"rotation":[1.5707963267949,-2.35619449019235,-4.32978028117747e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl11","params":{"center":[4.59619407771256,-4.59619407771256,0.0],"height":10.0,"radius":1.5,"rotation":[1.5707963267949,-0.785398163397449,-4.32978028117747e-17]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl12","params":{"center":[0.0,0.0,3.0],"height":3.0,"radius":1.5,"rotation":[1.5707963267949,0.0,0.0]}}],"op":"subtract"},{"geo":"cylinder","name":"cyl13","params":{"center":[0.0,0.0,4.0],"height":6.0,"radius":1.0,"rotation":[1.5707963267949,0.0,0.0]}}],"op":"subtract"}
+{
+    "op": "union",
+    "childs": [
+        {
+            "geo": "cylinder",
+            "name": "cylinder_0",
+            "params": {
+                "center": [
+                    0,
+                    0,
+                    0
+                ],
+                "radius": 5,
+                "height": 20,
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ]
+            }
+        },
+        {
+            "geo": "cylinder",
+            "name": "cylinder_1",
+            "params": {
+                "center": [
+                    0,
+                    0,
+                    0
+                ],
+                "radius": 5,
+                "height": 20,
+                "rotation": [
+                    1.570796,
+                    0,
+                    0
+                ]
+            }
+        },
+        {
+            "geo": "cylinder",
+            "name": "cylinder_2",
+            "params": {
+                "center": [
+                    0,
+                    0,
+                    0
+                ],
+                "radius": 5,
+                "height": 20,
+                "rotation": [
+                    0,
+                    0,
+                    1.570796
+                ]
+            }
+        },
+        {
+            "geo": "sphere",
+            "name": "sphere_0",
+            "params": {
+                "center": [
+                    0,
+                    0,
+                    0
+                ],
+                "radius": 8
+            }
+        },
+        {
+            "geo": "cube",
+            "name": "cube_0",
+            "params": {
+                "center": [
+                    0,
+                    -10,
+                    0
+                ],
+                "radius": [
+                    7.5,
+                    2,
+                    7.5
+                ],
+                "height": 10,
+                "rotation": [
+                    0,
+                    0,
+                    0
+                ]
+            }
+        }
+    ]
+}

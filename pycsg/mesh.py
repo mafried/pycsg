@@ -10,7 +10,7 @@ def node_to_mesh(node, grid_min, grid_max, cell_size):
     y_ = np.linspace(grid_min[1], grid_max[1], ny)
     z_ = np.linspace(grid_min[2], grid_max[2], nz)
 
-    x, y, z = np.meshgrid(x_, y_, z_)
+    x, y, z = np.meshgrid(x_, y_, z_, indexing='ij')
 
     p = np.stack((x.reshape(-1), y.reshape(-1), z.reshape(-1)), axis=1)
 

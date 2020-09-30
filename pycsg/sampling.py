@@ -20,3 +20,14 @@ def point_cloud_from_node(node, grid_min, grid_max, cell_size, max_dist):
     d = node.signed_distance(p)
 
     return p[np.where(abs(d[:]) < max_dist)]
+
+def voxel_from_node(node, dim):
+    x = y = z = np.linspace(0, dim, dim, endpoint=False)
+    x, y, z = np.meshgrid(x, y, z)
+    p = np.stack((x.reshape(-1), y.reshape(-1), z.reshape(-1)), axis=1)
+    d = node.signed_distance(p)
+    v = d.reshape((dim, dim, dim)).transpose()
+    v[v==0] = -1
+    v[v>0] = 0
+    v[v<0] = 1
+    return np.array(v, dtype=bool)

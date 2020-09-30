@@ -7,7 +7,6 @@ from pycsg.csg_node import CSGNode
 from pycsg.primitives import Sphere, Box, Cylinder
 from pycsg.operations import Union, Difference, Intersection
 from pycsg.transforms import Pose
-from generator.patterns import *
 
 def directions(param=None):
     if param is None:
@@ -96,7 +95,7 @@ def get_random_joint(joints, shapes, ops):
     shape = random.choice(shapes)
     return joint, base, direction, shape, op
 
-def get_random_params(tree, joint, base, direction, shape, op, size_min, size_max, size_step, rot_min, rot_max, rot_step):
+def get_random_params(tree, joint, base, direction, shape, op, size_min, size_max, size_step):
 
     def get_dim_base():
         key = list(base.children.keys()).pop()
@@ -197,6 +196,11 @@ def get_random_params(tree, joint, base, direction, shape, op, size_min, size_ma
             d -= 1
         if h % 2 != 0:
             h -= 1
+
+        w = size_min if w < size_min else w
+        d = size_min if d < size_min else d
+        h = size_min if h < size_min else h
+
         return w, d, h
 
     def get_outside():
@@ -274,6 +278,10 @@ def get_random_params(tree, joint, base, direction, shape, op, size_min, size_ma
         if rz % 2 != 0:
             rz -= 1
 
+        rx = size_min if rx < size_min else rx
+        ry = size_min if ry < size_min else ry
+        rz = size_min if rz < size_min else rz
+
         w_max = rx if rx < size_max else size_max
         d_max = ry if ry < size_max else size_max
         h_max = rz if rz < size_max else size_max
@@ -281,434 +289,156 @@ def get_random_params(tree, joint, base, direction, shape, op, size_min, size_ma
         return w_max, d_max, h_max
 
     if direction is None:
-        rot = (0, 0, 0)
-        size = [random.randrange(2*size_min, size_max+size_step, size_step) for _ in ["w", "d", "h"]]
+        if shape == "cylinder":
+            rot = random.choice(rotations())
+        else:
+            rot = (0, 0, 0)
+        w, d, h = [random.randrange(2*size_min, size_max+size_step, size_step) for _ in ["w", "d", "h"]]
+        if shape == "cylinder":
+            if rotations(rot) == "x":
+                dd = min(w, d)
+                w, d, h = dd, dd, h
+            elif rotations(rot) == "y":
+                dd = min(w, h)
+                w, d, h = dd, d, dd
+            else:
+                dd = min(d, h)
+                w, d, h = w, dd, dd
+        size = (w, d, h)
         pos = (0, 0, 0)
     else:
         dim_inside = get_inside()
         dim_outside = get_outside()
         base_shape = base.children[list(base.children.keys()).pop()].node_type()
         base_rot = tuple([int(round(r)) for r in base.r.as_euler("xyz", degrees=True)])
+        rot = random.choice(rotations())
 
-        if op == "union" or op is None:
+        if op == "intersection":
+            sys.exit("get_random_params() not implemented for intersection")
 
-            if base_shape == "box":
+        if (base_shape == "box" and (shape == "box" or (shape == "cylinder" and (rotations(rot) == "x" and direction in directions("z")) or (rotations(rot) == "y" and direction in directions("y")) or (rotations(rot) == "z" and direction in directions("x"))))) or (base_shape == "cylinder" and (rotations(base_rot) == "x" and direction in directions("z") and (shape == "box" or (shape == "cylinder" and rotations(rot) == "x"))) or (rotations(base_rot) == "y" and direction in directions("y") and (shape == "box" or (shape == "cylinder" and rotations(rot) == "y"))) or (rotations(base_rot) == "z" and direction in directions("x") and (shape == "box" or (shape == "cylinder" and rotations(rot) == "x")))):
 
-                if shape == "box":
-                    w_max, d_max, h_max = dim_outside
-                    w = random.randrange(size_min, w_max+size_step, size_step)
-                    d = random.randrange(size_min, d_max+size_step, size_step)
-                    h = random.randrange(size_min, h_max+size_step, size_step)
-                    rot = (0, 0, 0)
-                    size = (w, d, h)
-                    pos = get_pos_new_outside(w, d, h)
-
-                elif shape == "cylinder":
-                    if rotations(rot) == "x" and direction in directions("z"):
-                        pass
-                    elif rotations(rot) == "y" and direction in directions("y"):
-                        pass
-                    elif rotations(rot) == "z" and direction in directions("x"):
-                        pass
-
-                else:
-                    w_base, d_base, h_base = get_dim_base()
-                    w_out, d_out, h_out = dim_outside
-                    w_in, d_in, h_in = dim_inside
-                    w_max, d_max, h_max = w_out, d_out, h_out
-
-                    if direction in directions("x"):
-                        w_max += w_in
-                    elif direction in directions("y"):
-                        d_max += d_in
-                    else:
-                        h_max += h_in
-
-                    l_max = min(w_max, d_max, h_max)
-                    l = random.randrange(size_min, l_max+size_step, size_step)
-
-                    lx, ly, lz = get_pos_base()
-                    ux, uy, uz = get_pos_base_surface()
-
-                    assert l % 2 == 0
-                    if direction in directions("x"):
-                        if w_base > l:
-                            lx = ux - int(l/2) if direction == "right" else ux + int(l/2)
-                        if l > w_out:
-                            ux = ux - (l - w_out) if direction == "right" else ux + (l - w_out)
-                        x = random.randrange(lx, ux+1) if direction == "right" else random.randrange(ux, lx+1)
-                        x = x + int(l/2) if direction == "right" else x - int(l/2)
-                        y = ly
-                        z = lz
-                    elif direction in directions("y"):
-                        if d_base > l:
-                            ly = uy - int(l/2) if direction == "back" else uy + int(l/2)
-                        if l > d_out:
-                            uy = uy - (l - d_out) if direction == "back" else uy + (l - d_out)
-                        x = lx
-                        y = random.randrange(ly, uy+1) if direction == "back" else random.randrange(uy, ly+1)
-                        y = y + int(l/2) if direction == "back" else y - int(l/2)
-                        z = lz
-                    else:
-                        if h_base > l:
-                            lz = uz - int(l/2) if direction == "top" else uz + int(l/2)
-                        if l > h_out:
-                            uz = uz - (l - h_out) if direction == "top" else uz + (l - h_out)
-                        x = lx
-                        y = ly
-                        z = random.randrange(lz, uz+1) if direction == "top" else random.randrange(uz, lz+1)
-                        z = z + int(l/2) if direction == "top" else z - int(l/2)
-
-                    rot = (0, 0, 0)
-                    size = (l, l, l)
-                    pos = (x, y, z)
-
-            elif base_shape == "cylinder":
-                if rotations(base_rot) == "x":
-                    if direction in directions("z") and shape == "box":
-                         pass
-                    elif direction in directions("z") and shape == "cylinder" and rotations(rot) == "x":
-                         pass
-                    else:
-                        pass
-                elif rotations(base_rot) == "y":
-                    if direction in directions("y") and shape == "box":
-                        pass
-                    elif direction in directions("y") and shape == "cylinder" and rotations(rot) == "y":
-                        pass
-                    else:
-                        pass
-                elif rotations(base_rot) == "z":
-                    if direction in directions("x") and shape == "box":
-                        pass
-                    elif direction in directions("x") and shape == "cylinder" and rotations(rot) == "x":
-                        pass
-                    else:
-                        pass
-
-            elif base_shape == "sphere":
-                if shape == "box":
-                    l_base, _, _ = get_dim_base()
-                    w_out, d_out, h_out = dim_outside
-                    w_in, d_in, h_in = dim_inside
-                    w_max, d_max, h_max = w_out, d_out, h_out
-
-                    if direction in directions("x"):
-                        w_max += w_in
-                    elif direction in directions("y"):
-                        d_max += d_in
-                    else:
-                        h_max += h_in
-
-                    w = random.randrange(size_min, w_max+size_step, size_step)
-                    d = random.randrange(size_min, d_max+size_step, size_step)
-                    h = random.randrange(size_min, h_max+size_step, size_step)
-
-                    lx, ly, lz = get_pos_base()
-                    ux, uy, uz = get_pos_base_surface()
-
-                    if direction in directions("x"):
-                        assert w % 2 == 0
-                        if l_base > w:
-                            lx = ux - int(w/2) if direction == "right" else ux + int(w/2)
-                        if w > w_out:
-                            ux = ux - (w - w_out) if direction == "right" else ux + (w - w_out)
-                        x = random.randrange(lx, ux+1) if direction == "right" else random.randrange(ux, lx+1)
-                        x = x + int(w/2) if direction == "right" else x - int(w/2)
-                        y = ly
-                        z = lz
-                    elif direction in directions("y"):
-                        assert d % 2 == 0
-                        if l_base > d:
-                            ly = uy - int(d/2) if direction == "back" else uy + int(d/2)
-                        if d > d_out:
-                            uy = uy - (d - d_out) if direction == "back" else uy + (d - d_out)
-                        x = lx
-                        y = random.randrange(ly, uy+1) if direction == "back" else random.randrange(uy, ly+1)
-                        y = y + int(d/2) if direction == "back" else y - int(d/2)
-                        z = lz
-                    else:
-                        assert h % 2 == 0
-                        if l_base > h:
-                            lz = uz - int(h/2) if direction == "top" else uz + int(h/2)
-                        if h > h_out:
-                            uz = uz - (h - h_out) if direction == "top" else uz + (h - h_out)
-                        x = lx
-                        y = ly
-                        z = random.randrange(lz, uz+1) if direction == "top" else random.randrange(uz, lz+1)
-                        z = z + int(h/2) if direction == "top" else z - int(h/2)
-
-                    rot = (0, 0, 0)
-                    size = (w, d, h)
-                    pos = (x, y, z)
-
-                elif shape == "cylinder":
-                    pass
-
-                else:
-                    l_base, _, _ = get_dim_base()
-                    w_out, d_out, h_out = dim_outside
-                    w_in, d_in, h_in = dim_inside
-                    w_max, d_max, h_max = w_out, d_out, h_out
-
-                    if direction in directions("x"):
-                        w_max += w_in
-                    elif direction in directions("y"):
-                        d_max += d_in
-                    else:
-                        h_max += h_in
-
-                    l_max = min(w_max, d_max, h_max)
-                    l = random.randrange(size_min, l_max+size_step, size_step)
-
-                    lx, ly, lz = get_pos_base()
-                    ux, uy, uz = get_pos_base_surface()
-
-                    assert l % 2 == 0
-                    if direction in directions("x"):
-                        if l_base > l:
-                            lx = ux - int(l/2) if direction == "right" else ux + int(l/2)
-                        if l > w_out:
-                            ux = ux - (l - w_out) if direction == "right" else ux + (l - w_out)
-                        x = random.randrange(lx, ux+1) if direction == "right" else random.randrange(ux, lx+1)
-                        x = x + int(l/2) if direction == "right" else x - int(l/2)
-                        y = ly
-                        z = lz
-                    elif direction in directions("y"):
-                        if l_base > l:
-                            ly = uy - int(l/2) if direction == "back" else uy + int(l/2)
-                        if l > d_out:
-                            uy = uy - (l - d_out) if direction == "back" else uy + (l - d_out)
-                        x = lx
-                        y = random.randrange(ly, uy+1) if direction == "back" else random.randrange(uy, ly+1)
-                        y = y + int(l/2) if direction == "back" else y - int(l/2)
-                        z = lz
-                    else:
-                        if l_base > l:
-                            lz = uz - int(l/2) if direction == "top" else uz + int(l/2)
-                        if l > h_out:
-                            uz = uz - (l - h_out) if direction == "top" else uz + (l - h_out)
-                        x = lx
-                        y = ly
-                        z = random.randrange(lz, uz+1) if direction == "top" else random.randrange(uz, lz+1)
-                        z = z + int(l/2) if direction == "top" else z - int(l/2)
-
-                    rot = (0, 0, 0)
-                    size = (l, l, l)
-                    pos = (x, y, z)
-
+            if op == "union" or op is None:
+                w_max, d_max, h_max = dim_outside
             else:
-                sys.exit("unknown shape in get_random_params()")
+                w_max, d_max, h_max = dim_inside
 
-        elif op == "difference":
-            if base_shape == "box":
+            w = random.randrange(size_min, w_max+size_step, size_step)
+            d = random.randrange(size_min, d_max+size_step, size_step)
+            h = random.randrange(size_min, h_max+size_step, size_step)
 
-                if shape == "box":
-                    w_max, d_max, h_max = dim_inside
-                    w = random.randrange(size_min, w_max+size_step, size_step)
-                    d = random.randrange(size_min, d_max+size_step, size_step)
-                    h = random.randrange(size_min, h_max+size_step, size_step)
-                    rot = (0, 0, 0)
-                    size = (w, d, h)
-                    pos = get_pos_new_inside(w, d, h)
-
-                elif shape == "cylinder":
-                    if rotations(rot) == "x" and direction in directions("z"):
-                        pass
-                    elif rotations(rot) == "y" and direction in directions("y"):
-                        pass
-                    elif rotations(rot) == "z" and direction in directions("x"):
-                        pass
-                else:
-                    w_base, d_base, h_base = get_dim_base()
-                    w_out, d_out, h_out = dim_outside
-                    w_in, d_in, h_in = dim_inside
-                    w_max, d_max, h_max = w_out, d_out, h_out
-
-                    if direction in directions("x"):
-                        w_max += w_in
-                    elif direction in directions("y"):
-                        d_max += d_in
-                    else:
-                        h_max += h_in
-
-                    l_max = min(w_max, d_max, h_max)
-                    l = random.randrange(size_min, l_max+size_step, size_step)
-
-                    lx, ly, lz = get_pos_base()
-                    ux, uy, uz = get_pos_base_surface()
-
-                    assert l % 2 == 0
-                    if direction in directions("x"):
-                        if w_base > l:
-                            lx = ux - int(l/2) if direction == "right" else ux + int(l/2)
-                        if l > w_out:
-                            ux = ux - (l - w_out) if direction == "right" else ux + (l - w_out)
-                        x = random.randrange(lx, ux) if direction == "right" else random.randrange(ux+1, lx+1)
-                        x = x + int(l/2) if direction == "right" else x - int(l/2)
-                        y = ly
-                        z = lz
-                    elif direction in directions("y"):
-                        if d_base > l:
-                            ly = uy - int(l/2) if direction == "back" else uy + int(l/2)
-                        if l > d_out:
-                            uy = uy - (l - d_out) if direction == "back" else uy + (l - d_out)
-                        x = lx
-                        y = random.randrange(ly, uy) if direction == "back" else random.randrange(uy+1, ly+1)
-                        y = y + int(l/2) if direction == "back" else y - int(l/2)
-                        z = lz
-                    else:
-                        if h_base > l:
-                            lz = uz - int(l/2) if direction == "top" else uz + int(l/2)
-                        if l > h_out:
-                            uz = uz - (l - h_out) if direction == "top" else uz + (l - h_out)
-                        x = lx
-                        y = ly
-                        z = random.randrange(lz, uz) if direction == "top" else random.randrange(uz+1, lz+1)
-                        z = z + int(l/2) if direction == "top" else z - int(l/2)
-
-                    rot = (0, 0, 0)
-                    size = (l, l, l)
-                    pos = (x, y, z)
-
-            elif base_shape == "cylinder":
-                if rotations(base_rot) == "x":
-                    if direction in directions("z") and shape == "box":
-                         pass
-                    elif direction in directions("z") and shape == "cylinder" and rotations(rot) == "x":
-                         pass
-                    else:
-                        pass
-                elif rotations(base_rot) == "y":
-                    if direction in directions("y") and shape == "box":
-                        pass
-                    elif direction in directions("y") and shape == "cylinder" and rotations(rot) == "y":
-                        pass
-                    else:
-                        pass
-                elif rotations(base_rot) == "z":
-                    if direction in directions("x") and shape == "box":
-                        pass
-                    elif direction in directions("x") and shape == "cylinder" and rotations(rot) == "x":
-                        pass
-                    else:
-                        pass
-            elif base_shape == "sphere":
-                if shape == "box":
-                    l_base, _, _ = get_dim_base()
-                    w_out, d_out, h_out = dim_outside
-                    w_in, d_in, h_in = dim_inside
-                    w_max, d_max, h_max = w_out, d_out, h_out
-
-                    if direction in directions("x"):
-                        w_max += w_in
-                    elif direction in directions("y"):
-                        d_max += d_in
-                    else:
-                        h_max += h_in
-
-                    w = random.randrange(size_min, w_max+size_step, size_step)
-                    d = random.randrange(size_min, d_max+size_step, size_step)
-                    h = random.randrange(size_min, h_max+size_step, size_step)
-
-                    lx, ly, lz = get_pos_base()
-                    ux, uy, uz = get_pos_base_surface()
-
-                    if direction in directions("x"):
-                        assert w % 2 == 0
-                        if l_base > w:
-                            lx = ux - int(w/2) if direction == "right" else ux + int(w/2)
-                        if w > w_out:
-                            ux = ux - (w - w_out) if direction == "right" else ux + (w - w_out)
-                        x = random.randrange(lx, ux) if direction == "right" else random.randrange(ux+1, lx+1)
-                        x = x + int(w/2) if direction == "right" else x - int(w/2)
-                        y = ly
-                        z = lz
-                    elif direction in directions("y"):
-                        assert d % 2 == 0
-                        if l_base > d:
-                            ly = uy - int(d/2) if direction == "back" else uy + int(d/2)
-                        if d > d_out:
-                            uy = uy - (d - d_out) if direction == "back" else uy + (d - d_out)
-                        x = lx
-                        y = random.randrange(ly, uy) if direction == "back" else random.randrange(uy+1, ly+1)
-                        y = y + int(d/2) if direction == "back" else y - int(d/2)
-                        z = lz
-                    else:
-                        assert h % 2 == 0
-                        if l_base > h:
-                            lz = uz - int(h/2) if direction == "top" else uz + int(h/2)
-                        if h > h_out:
-                            uz = uz - (h - h_out) if direction == "top" else uz + (h - h_out)
-                        x = lx
-                        y = ly
-                        z = random.randrange(lz, uz) if direction == "top" else random.randrange(uz+1, lz+1)
-                        z = z + int(h/2) if direction == "top" else z - int(h/2)
-
-                    rot = (0, 0, 0)
-                    size = (w, d, h)
-                    pos = (x, y, z)
-
-                elif shape == "cylinder":
-                    pass
-
-                else:
-                    l_base, _, _ = get_dim_base()
-                    w_out, d_out, h_out = dim_outside
-                    w_in, d_in, h_in = dim_inside
-                    w_max, d_max, h_max = w_out, d_out, h_out
-
-                    if direction in directions("x"):
-                        w_max += w_in
-                    elif direction in directions("y"):
-                        d_max += d_in
-                    else:
-                        h_max += h_in
-
-                    l_max = min(w_max, d_max, h_max)
-                    l = random.randrange(size_min, l_max+size_step, size_step)
-
-                    lx, ly, lz = get_pos_base()
-                    ux, uy, uz = get_pos_base_surface()
-
-                    assert l % 2 == 0
-                    if direction in directions("x"):
-                        if l_base > l:
-                            lx = ux - int(l/2) if direction == "right" else ux + int(l/2)
-                        if l > w_out:
-                            ux = ux - (l - w_out) if direction == "right" else ux + (l - w_out)
-                        x = random.randrange(lx, ux) if direction == "right" else random.randrange(ux+1, lx+1)
-                        x = x + int(l/2) if direction == "right" else x - int(l/2)
-                        y = ly
-                        z = lz
-                    elif direction in directions("y"):
-                        if l_base > l:
-                            ly = uy - int(l/2) if direction == "back" else uy + int(l/2)
-                        if l > d_out:
-                            uy = uy - (l - d_out) if direction == "back" else uy + (l - d_out)
-                        x = lx
-                        y = random.randrange(ly, uy) if direction == "back" else random.randrange(uy+1, ly+1)
-                        y = y + int(l/2) if direction == "back" else y - int(l/2)
-                        z = lz
-                    else:
-                        if l_base > l:
-                            lz = uz - int(l/2) if direction == "top" else uz + int(l/2)
-                        if l > h_out:
-                            uz = uz - (l - h_out) if direction == "top" else uz + (l - h_out)
-                        x = lx
-                        y = ly
-                        z = random.randrange(lz, uz) if direction == "top" else random.randrange(uz+1, lz+1)
-                        z = z + int(l/2) if direction == "top" else z - int(l/2)
-
-                    rot = (0, 0, 0)
-                    size = (l, l, l)
-                    pos = (x, y, z)
-
+            if shape == "box":
+                rot = (0, 0, 0)
             else:
-                sys.exit("unknown shape in get_random_params()")
+                if rotations(rot) == "x":
+                    dd = min(w, d)
+                    w, d, h = dd, dd, h
+                elif rotations(rot) == "y":
+                    dd = min(w, h)
+                    w, d, h = dd, d, dd
+                else:
+                    dd = min(d, h)
+                    w, d, h = w, dd, dd
+
+            size = (w, d, h)
+
+            if op == "union" or op is None:
+                pos = get_pos_new_outside(w, d, h)
+            else:
+                pos = get_pos_new_inside(w, d, h)
 
         else:
-            sys.exit("get_random_params not implemented for intersection")
+
+            w_base, d_base, h_base = get_dim_base()
+            w_out, d_out, h_out = dim_outside
+            w_in, d_in, h_in = dim_inside
+            w_max, d_max, h_max = w_out, d_out, h_out
+
+            if direction in directions("x"):
+                w_max += w_in
+            elif direction in directions("y"):
+                d_max += d_in
+            else:
+                h_max += h_in
+
+            if shape == "box" or shape == "cylinder":
+                w = random.randrange(size_min, w_max+size_step, size_step)
+                d = random.randrange(size_min, d_max+size_step, size_step)
+                h = random.randrange(size_min, h_max+size_step, size_step)
+                if shape == "cylinder":
+                    if rotations(rot) == "x":
+                        dd = min(w, d)
+                        w, d, h = dd, dd, h
+                    elif rotations(rot) == "y":
+                        dd = min(w, h)
+                        w, d, h = dd, d, dd
+                    else:
+                        dd = min(d, h)
+                        w, d, h = w, dd, dd
+            else:
+                l_max = min(w_max, d_max, h_max)
+                l = random.randrange(size_min, l_max+size_step, size_step)
+                w = l
+                d = l
+                h = l
+
+            lx, ly, lz = get_pos_base()
+            ux, uy, uz = get_pos_base_surface()
+
+            if direction in directions("x"):
+                assert w % 2 == 0
+                if w_base > w:
+                    lx = ux - int(w/2) if direction == "right" else ux + int(w/2)
+                if w > w_out:
+                    ux = ux - (w - w_out) if direction == "right" else ux + (w - w_out)
+                try:
+                    if op == "union" or op is None:
+                        x = random.randrange(lx, ux+1) if direction == "right" else random.randrange(ux, lx+1)
+                    else:
+                        x = random.randrange(lx, ux) if direction == "right" else random.randrange(ux+1, lx+1)
+                except ValueError:
+                    x = lx if direction in directions("pos") else ux
+                x = x + int(w/2) if direction == "right" else x - int(w/2)
+                y = ly
+                z = lz
+            elif direction in directions("y"):
+                assert d % 2 == 0
+                if d_base > d:
+                    ly = uy - int(d/2) if direction == "back" else uy + int(d/2)
+                if d > d_out:
+                    uy = uy - (d - d_out) if direction == "back" else uy + (d - d_out)
+                x = lx
+                try:
+                    if op == "union" or op is None:
+                        y = random.randrange(ly, uy+1) if direction == "back" else random.randrange(uy, ly+1)
+                    else:
+                        y = random.randrange(ly, uy) if direction == "back" else random.randrange(uy+1, ly+1)
+                except ValueError:
+                    y = ly if direction in directions("pos") else uy
+                y = y + int(d/2) if direction == "back" else y - int(d/2)
+                z = lz
+            else:
+                assert h % 2 == 0
+                if h_base > h:
+                    lz = uz - int(h/2) if direction == "top" else uz + int(h/2)
+                if h > h_out:
+                    uz = uz - (h - h_out) if direction == "top" else uz + (h - h_out)
+                x = lx
+                y = ly
+                try:
+                    if op == "union" or op is None:
+                        z = random.randrange(lz, uz+1) if direction == "top" else random.randrange(uz, lz+1)
+                    else:
+                        z = random.randrange(lz, uz) if direction == "top" else random.randrange(uz+1, lz+1)
+                except ValueError:
+                    z = lz if direction in directions("pos") else uz
+                z = z + int(h/2) if direction == "top" else z - int(h/2)
+
+            if shape == "box" or shape == "sphere":
+                rot = (0, 0, 0)
+
+            size = (w, d, h)
+            pos = (x, y, z)
 
     return size, pos, rot
 
@@ -721,8 +451,19 @@ def update_tree(tree, op, shape, size, pos, rot):
     if shape == "box":
         child = Box(size=size, name=get_name())
     elif shape == "cylinder":
-        radius = int(min(width, height)/2)
-        child = Cylinder(radius=radius, height=depth, name=get_name())
+        if rot == rotations("x"):
+            assert width == depth
+            radius = int(width/2)
+            height = height
+        elif rot == rotations("y"):
+            assert width == height
+            radius = int(width/2)
+            height = depth
+        else:
+            assert depth == height
+            radius = int(depth/2)
+            height = width
+        child = Cylinder(radius=radius, height=height, name=get_name())
     elif shape == "sphere":
         radius = int(min(width, depth, height)/2)
         child = Sphere(radius=radius, name=get_name())
@@ -813,7 +554,7 @@ def update_joints(joints, old_joint, tree, subtree, pos, op, direction, ops, siz
             else:
                 width, depth, height = get_dim(old_joint["base"])
 
-            if width <= size_min or depth <= size_min or height <= size_min:
+            if width < 2 * size_min or depth < 2 * size_min or height < 2 * size_min:
                 return False
 
             if d in directions("x"):
@@ -857,9 +598,5 @@ def update_joints(joints, old_joint, tree, subtree, pos, op, direction, ops, siz
     return joints
 
 def update_n_primitives(n_primitives, shape):
-    if shape in ["box", "cylinder", "sphere"]:
-        n_primitives -= 1
-    else:
-        n_primitives -= patterns_dict[shape]["n_primitives"]
+    n_primitives -= 1
     return n_primitives
-

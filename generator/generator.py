@@ -30,6 +30,12 @@ def get_random_tree(n_primitives, configfile="generator/config.ini"):
     size_min = config.getint("size", "min")
     size_max = config.getint("size", "max")
     size_step = config.getint("size", "step")
+    
+    for val in [size_min, size_max, size_step]:
+        assert val % 2 == 0
+
+    assert size_min > 0
+    assert size_max < 64
 
     joints = []
     tree = None

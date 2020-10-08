@@ -1,9 +1,11 @@
 from pycsg.operations import Union, Intersection, Complement, Difference
 from pycsg.primitives import Cylinder, Sphere, Box
 from pycsg.transforms import Pose
-from pycsg.csg_node import CSGNode
+from pycsg.csg_node import CSGNode, get_node_type
 
 import uuid
+import sys
+import numpy as np
 
 
 def node_from_old_json_format(json, degrees=True):
@@ -62,3 +64,94 @@ def node_from_stack(stack, degrees=True):
                 break
 
     return labels[-1]
+
+def node_to_stack(node):
+
+    ops = {
+        "minus": "-",
+        "union": "+",
+        "inter": "*"
+    }
+
+    geo = {
+        "box": "b",
+        "cylinder": "c",
+        "sphere": "s"
+    }
+
+    def get_op(node_type):
+        op = [ops[node_type]]
+        for i in range(9):
+            op.append("0")
+        return op
+
+    def get_params(p):
+
+        def get_pos():
+            pose = p.pose
+            x, y, z = 0, 0, 0
+            v = np.array([x, y, z, 1])
+            x, y, z, _ = np.matmul(pose, v)
+            for coord in [x, y, z]:
+                assert coord.is_integer()
+            x, y, z = int(x), int(y), int(z)
+            size = [x, y, z]
+            return [str(i+32) for i in size] # remove +32 for range -32 <= x <= 32 instead of 0 <= x <= 64
+
+        def get_rot():
+            rot = [int(round(r)) for r in p.r.as_euler("xyz", degrees=True)]
+            return [str(i) for i in rot]
+
+        def get_size():
+            children = p.children
+            for key, prim in children.items():
+                node_type = get_node_type(prim)
+                if node_type == "box":
+                    w, d, h = prim.size
+                    size = [w, d, h]
+                elif node_type == "cylinder":
+                    r = prim.radius
+                    h = prim.height
+                    size = [2*r, h, 0]
+                elif node_type == "sphere":
+                    r = prim.radius
+                    size = [2*r, 0, 0]
+                else:
+                    sys.exit("unknown node type in get_size()")
+            return [str(i) for i in size]
+
+        def get_label():
+            children = p.children
+            for key, prim in children.items():
+                node_type = get_node_type(prim)
+            return [geo[node_type]]
+
+        assert len(p.children) == 1
+        pos = get_pos()
+        rot = get_rot()
+        size = get_size()
+        label = get_label()
+        params = label + pos + rot + size
+        return params
+
+    def get_subtree(p):
+        arr = []
+        node_type = get_node_type(p)
+        if node_type in ops:
+            children = p.children
+            for k, obj in children.items():
+                sub = get_subtree(obj)
+                for item in sub:
+                    arr.append(item)
+            op = get_op(node_type)
+            arr.append(op)
+        else:
+            assert node_type == "pose"
+            params = get_params(p)
+            arr.append(params)
+        return arr
+
+    arr = get_subtree(node)
+    stack = ",".join([",".join(i) for i in arr])
+
+    return stack
